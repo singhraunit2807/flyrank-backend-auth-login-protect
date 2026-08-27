@@ -39,11 +39,7 @@ app.post('/auth/login', async (req, res) => {
 });
 
 app.post('/auth/logout', auth, async (req, res) => {
-  const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-    global: { headers: { Authorization: `Bearer ${req.accessToken}` } },
-  });
-  const { error } = await client.auth.signOut({ scope: 'local' });
+  const { error } = await supabase.auth.admin.signOut(req.accessToken, 'local');
   if (error) return res.status(401).json({ error: 'Unable to log out session' });
   res.status(204).send();
 });
@@ -57,5 +53,4 @@ app.get('/public/info', (_req, res) => {
 });
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
-
 app.listen(Number(process.env.PORT || 3000), () => console.log('AI version server running'));

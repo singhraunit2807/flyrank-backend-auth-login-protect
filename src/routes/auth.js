@@ -16,34 +16,22 @@ const loginLimiter = rateLimit({
 
 router.post('/signup', async (req, res) => {
   const { email, password } = req.body || {};
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
   const supabase = createSupabaseClient();
   const { data, error } = await supabase.auth.signUp({ email, password });
-
-  if (error) {
-    return res.status(400).json({ error: error.message });
-  }
+  if (error) return res.status(400).json({ error: error.message });
 
   return res.status(201).json({ user: data.user });
 });
 
 router.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body || {};
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
   const supabase = createSupabaseClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error || !data.session) {
-    return res.status(401).json({ error: 'Invalid login credentials' });
-  }
+  if (error || !data.session) return res.status(401).json({ error: 'Invalid login credentials' });
 
   return res.status(200).json({
     access_token: data.session.access_token,
@@ -53,17 +41,11 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 router.post('/refresh', async (req, res) => {
   const { refresh_token } = req.body || {};
-
-  if (!refresh_token) {
-    return res.status(400).json({ error: 'Refresh token is required' });
-  }
+  if (!refresh_token) return res.status(400).json({ error: 'Refresh token is required' });
 
   const supabase = createSupabaseClient();
   const { data, error } = await supabase.auth.refreshSession({ refresh_token });
-
-  if (error || !data.session) {
-    return res.status(401).json({ error: 'Invalid or expired refresh token' });
-  }
+  if (error || !data.session) return res.status(401).json({ error: 'Invalid or expired refresh token' });
 
   return res.status(200).json({
     access_token: data.session.access_token,
@@ -73,13 +55,12 @@ router.post('/refresh', async (req, res) => {
 
 router.post('/logout', requireAuth, async (req, res) => {
   try {
-    const supabase = createSupabaseClient(req.accessToken);
-    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    // Server-side sign-out accepts the verified user's JWT and revokes the session refresh token.
+    // It does not require the service_role key for this user-session operation.
+    const supabase = createSupabaseClient();
+    const { error } = await supabase.auth.admin.signOut(req.accessToken, 'local');
 
-    if (error) {
-      return res.status(401).json({ error: 'Unable to log out session' });
-    }
-
+    if (error) return res.status(401).json({ error: 'Unable to log out session' });
     return res.status(204).send();
   } catch (_error) {
     return res.status(401).json({ error: 'Unable to log out session' });
