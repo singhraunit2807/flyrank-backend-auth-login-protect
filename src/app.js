@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const { createSupabaseClient } = require('./supabase');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 app.disable('x-powered-by');
@@ -26,5 +27,7 @@ app.get('/health', async (_req, res) => {
     return res.status(503).json({ status: 'degraded', error: error.message });
   }
 });
+
+app.use('/auth', authRoutes);
 
 module.exports = app;
