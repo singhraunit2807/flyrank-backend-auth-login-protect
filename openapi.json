@@ -29,6 +29,11 @@
           "password": { "type": "string", "format": "password", "example": "password123" }
         }
       },
+      "RefreshRequest": {
+        "type": "object",
+        "required": ["refresh_token"],
+        "properties": { "refresh_token": { "type": "string" } }
+      },
       "Error": {
         "type": "object",
         "properties": { "error": { "type": "string" } }
@@ -43,7 +48,7 @@
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Credentials" } } } },
         "responses": {
           "201": { "description": "User created" },
-          "400": { "description": "Missing or invalid input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "400": { "description": "Missing or invalid input" }
         }
       }
     },
@@ -54,8 +59,21 @@
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Credentials" } } } },
         "responses": {
           "200": { "description": "Login successful" },
-          "400": { "description": "Missing input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "Invalid login credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "400": { "description": "Missing input" },
+          "401": { "description": "Invalid login credentials" },
+          "429": { "description": "Too many failed login attempts" }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Exchange a refresh token for a fresh access token",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RefreshRequest" } } } },
+        "responses": {
+          "200": { "description": "New access token issued" },
+          "400": { "description": "Missing refresh token" },
+          "401": { "description": "Invalid or expired refresh token" }
         }
       }
     },
@@ -66,7 +84,7 @@
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "204": { "description": "Logged out" },
-          "401": { "description": "Missing or invalid token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "401": { "description": "Missing or invalid token" }
         }
       }
     },
@@ -77,14 +95,14 @@
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": { "description": "Authenticated user metadata" },
-          "401": { "description": "Missing, malformed, invalid, or expired token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "401": { "description": "Missing, malformed, invalid, or expired token" }
         }
       }
     },
     "/protected/dashboard": {
       "get": {
         "tags": ["Protected"],
-        "summary": "Example second protected route using the same middleware",
+        "summary": "Second protected route using the same middleware",
         "security": [{ "bearerAuth": [] }],
         "responses": { "200": { "description": "Dashboard data" }, "401": { "description": "Unauthorized" } }
       }

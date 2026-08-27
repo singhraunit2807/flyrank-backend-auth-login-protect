@@ -1,0 +1,61 @@
+require('dotenv').config();
+const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const { createClient } = require('@supabase/supabase-js');
+const spec = require('../openapi.json');
+
+const app = express();
+app.use(express.json());
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+});
+
+async function auth(req, res, next) {
+  const authorization = req.get('Authorization');
+  const token = authorization ? authorization.split(' ')[1] : null;
+  if (!token) return res.status(401).json({ error: 'Access token required' });
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return res.status(401).json({ error: 'Invalid or expired token' });
+  req.user = data.user;
+  req.accessToken = token;
+  next();
+}
+
+app.post('/auth/signup', async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ user: data.user });
+});
+
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.session) return res.status(401).json({ error: 'Invalid login credentials' });
+  res.status(200).json({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
+});
+
+app.post('/auth/logout', auth, async (req, res) => {
+  const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: `Bearer ${req.accessToken}` } },
+  });
+  const { error } = await client.auth.signOut({ scope: 'local' });
+  if (error) return res.status(401).json({ error: 'Unable to log out session' });
+  res.status(204).send();
+});
+
+app.get('/protected/profile', auth, (req, res) => {
+  res.status(200).json({ id: req.user.id, email: req.user.email, created_at: req.user.created_at });
+});
+
+app.get('/public/info', (_req, res) => {
+  res.status(200).json({ message: 'Welcome stranger! This info is public.' });
+});
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
+
+app.listen(Number(process.env.PORT || 3000), () => console.log('AI version server running'));
