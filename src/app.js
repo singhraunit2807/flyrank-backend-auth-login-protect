@@ -3,6 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const { createSupabaseClient } = require('./supabase');
 const authRoutes = require('./routes/auth');
+const publicRoutes = require('./routes/public');
+const protectedRoutes = require('./routes/protected');
 
 const app = express();
 app.disable('x-powered-by');
@@ -29,5 +31,7 @@ app.get('/health', async (_req, res) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/public', publicRoutes);
+app.use('/protected', protectedRoutes);
 
 module.exports = app;
