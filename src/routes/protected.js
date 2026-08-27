@@ -1,16 +1,16 @@
 const express = require('express');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/profile', (req, res) => {
-  const authorization = req.get('Authorization');
-  const [scheme, token] = authorization ? authorization.trim().split(/\s+/) : [];
+router.get('/profile', requireAuth, (req, res) => {
+  const { id, email, created_at } = req.user;
 
-  if (scheme !== 'Bearer' || !token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  return res.status(200).json({ message: 'Token received. Verification is added in Stage 3.', token_present: true });
+  return res.status(200).json({
+    id,
+    email,
+    created_at,
+  });
 });
 
 module.exports = router;
